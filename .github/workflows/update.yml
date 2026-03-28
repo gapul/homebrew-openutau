@@ -1,0 +1,60 @@
+name: Update Cask
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 毎日 JST 15:00 に実行
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest release
+        id: release
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/stakira/OpenUtau/releases/latest)
+          VERSION=$(echo "$LATEST" | jq -r '.tag_name')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          ARM64_URL="https://github.com/stakira/OpenUtau/releases/download/${VERSION}/OpenUtau-osx-arm64.dmg"
+          X64_URL="https://github.com/stakira/OpenUtau/releases/download/${VERSION}/OpenUtau-osx-x64.dmg"
+          echo "arm64_url=$ARM64_URL" >> "$GITHUB_OUTPUT"
+          echo "x64_url=$X64_URL" >> "$GITHUB_OUTPUT"
+
+          ARM64_SHA=$(curl -sL "$ARM64_URL" | sha256sum | awk '{print $1}')
+          X64_SHA=$(curl -sL "$X64_URL" | sha256sum | awk '{print $1}')
+          echo "arm64_sha=$ARM64_SHA" >> "$GITHUB_OUTPUT"
+          echo "x64_sha=$X64_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Check if update needed
+        id: check
+        run: |
+          CURRENT=$(grep 'version "' Casks/openutau.rb | head -1 | grep -o '"[^"]*"' | tr -d '"')
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" = "${{ steps.release.outputs.version }}" ]; then
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update cask
+        if: steps.check.outputs.needs_update == 'true'
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          ARM64_SHA="${{ steps.release.outputs.arm64_sha }}"
+          X64_SHA="${{ steps.release.outputs.x64_sha }}"
+
+          sed -i "s|version \".*\"|version \"$VERSION\"|" Casks/openutau.rb
+          sed -i "s|arm:   \"[a-f0-9]*\"|arm:   \"$ARM64_SHA\"|" Casks/openutau.rb
+          sed -i "s|intel: \"[a-f0-9]*\"|intel: \"$X64_SHA\"|" Casks/openutau.rb
+
+      - name: Commit and push
+        if: steps.check.outputs.needs_update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/openutau.rb
+          git commit -m "Update openutau to ${{ steps.release.outputs.version }}"
+          git push
