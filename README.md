@@ -33,6 +33,7 @@ brew untap gapul/openutau
 | 対応 macOS | Monterey 以降 |
 | ダウンロード元 | [stakira/OpenUtau](https://github.com/stakira/OpenUtau) 公式リリース |
 | 自動更新 | 毎日 JST 15:00 に最新リリースを確認 |
+| 検疫解除 | インストール・アップデート後に自動で `xattr -rc` を実行 |
 
 ## 免責事項
 
