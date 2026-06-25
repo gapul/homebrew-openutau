@@ -10,7 +10,7 @@ cask "openutau" do
   desc "Open singing synthesis platform / open source UTAU successor"
   homepage "https://www.openutau.com/"
 
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "OpenUtau.app"
 
