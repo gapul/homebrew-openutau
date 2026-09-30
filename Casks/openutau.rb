@@ -14,8 +14,8 @@ cask "openutau" do
 
   app "OpenUtau.app"
 
-  postflight do
-    system_command "xattr", args: ["-rc", "#{appdir}/OpenUtau.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-rc", "{{appdir}}/OpenUtau.app"]
   end
 
   zap trash: [
